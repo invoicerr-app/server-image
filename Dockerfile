@@ -21,6 +21,13 @@ RUN apt-get update && apt-get install -y \
     bash \
     netcat-traditional \
     dumb-init \
+    # Node's own armv7l build links against libatomic, which 32-bit ARM does not provide in libgcc
+    # the way amd64 and arm64 do. Without it the binary does not even start: every container built
+    # for linux/arm/v7 died on `node: error while loading shared libraries: libatomic.so.1`, which
+    # looks like a broken image rather than a missing package. Harmless on the other two
+    # architectures, where it is already satisfied. Measured on a real 32-bit Pi: installing this one
+    # package turns the failure into `v22.13.1`.
+    libatomic1 \
     --no-install-recommends \
     \
 
