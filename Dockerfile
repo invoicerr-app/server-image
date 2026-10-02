@@ -1,15 +1,9 @@
 FROM nginx:bookworm
 
-# bash (not dash) so pipefail below actually applies: the SHA verification pipe must fail the
-# build if either side of it fails, not just if sha256sum does.
+# bash, not dash: makes pipefail below apply to the SHA-check pipe.
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# linux/arm/v7 was dropped from this image (and from invoicerr's product image) because Node.js
-# stopped publishing linux-armv7l binaries starting with Node 24: upstream's own BUILDING.md lists
-# armv7 as "Experimental, Downgraded as of Node.js 24", and nodejs.org/dist/v24.x.x carries no
-# armv7l tarball at all. Self-hosters on a 32-bit ARM board (Raspberry Pi 2/3/Zero on the 32-bit OS)
-# need to move to a 64-bit OS on the same hardware to keep using the arm64 image; 64-bit capable
-# Pi 3/4/5 boards already run fine on linux/arm64.
+# linux/arm/v7 dropped: Node 24 ships no linux-armv7l build.
 ARG TARGETARCH
 
 ENV NODE_VERSION=24.21.0
@@ -17,12 +11,8 @@ ENV NODE_VERSION=24.21.0
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-# `apt-get upgrade` matters as much as `apt-get install` here: a plain install only pulls new
-# versions of the packages it is asked for, it does not touch packages already satisfied by the
-# base image's existing versions (openssl, libssl3, libgnutls30, ...). Measured without the
-# upgrade: a same-day fresh build still carried 4 fixable CRITICAL / 57 fixable HIGH CVEs in those
-# base libraries, none of them in chromium itself. With the upgrade added: 0 fixable CRITICAL, 0
-# fixable HIGH on the OS packages target (Trivy 0.58.1, --severity CRITICAL,HIGH --ignore-unfixed).
+# apt-get upgrade too: install alone leaves already-present packages (openssl, libssl3,
+# libgnutls30) on their old, unpatched version.
 RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     curl \
     ca-certificates \

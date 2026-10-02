@@ -5,10 +5,7 @@ on:
     types: [ "created" ]
   workflow_dispatch:
   schedule:
-    # Weekly rebuild so Debian security updates (chromium included) land on :latest without
-    # waiting for a release. Monday 03:00 UTC. GitHub Actions always runs a schedule trigger
-    # against the default branch, so GITHUB_REF here is refs/heads/main; the event-name check
-    # below catches it before the branch-name case would tag it as ":main" instead of ":latest".
+    # Weekly rebuild keeps :latest on current Debian security patches.
     - cron: "0 3 * * 1"
 
 env:
@@ -29,13 +26,8 @@ jobs:
           REPO_NAME_LOWER=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
           REGISTRY_IMAGE="${{ env.REGISTRY }}/${REPO_NAME_LOWER}"
 
-          # The schedule case must be checked before the refs/heads/* case: a cron run's
-          # GITHUB_REF is refs/heads/<default-branch>, which would otherwise fall into the
-          # branch-name tag below and never touch :latest. This rebuild DOES move :latest on
-          # purpose, since invoicerr's own Dockerfile builds FROM this image's :latest tag and
-          # that is the whole point of the weekly rebuild. The dated tag is kept alongside it so
-          # a specific scheduled build can still be pulled and inspected after :latest has moved
-          # again.
+          # Checked before refs/heads/* below: a cron run's GITHUB_REF is refs/heads/<default>,
+          # which would otherwise tag it by branch name and never touch :latest.
           if [[ "${GITHUB_EVENT_NAME}" == "schedule" ]]; then
             DATE_TAG=$(date -u +%Y%m%d)
             TAG_ARGS="-t ${REGISTRY_IMAGE}:latest -t ${REGISTRY_IMAGE}:scheduled-${DATE_TAG}"
@@ -57,10 +49,6 @@ jobs:
           echo "repo-name-lower=$REPO_NAME_LOWER" >> $GITHUB_OUTPUT
           echo "registry-image=$REGISTRY_IMAGE" >> $GITHUB_OUTPUT
           echo "tag-args=$TAG_ARGS" >> $GITHUB_OUTPUT
-          # Was "echo cache-ref=$cache-ref", a pre-existing bug: $cache was never set, so this
-          # output was always the literal string "-ref" regardless of branch, collapsing every
-          # build's GHA cache into one scope. Fixed while touching this step for the schedule
-          # case above.
           echo "cache-ref=$CACHE_REF" >> $GITHUB_OUTPUT
 
   build:
@@ -73,9 +61,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # linux/arm/v7 was dropped (see the comment on ARG TARGETARCH in the Dockerfile):
-          # Node 24 ships no linux-armv7l build. Both remaining platforms now run on a runner
-          # native to their own architecture, so QEMU emulation is no longer needed either.
+          # linux/arm/v7 dropped, see Dockerfile. Both runners are now native, no QEMU needed.
           - platform: linux/amd64
             runner: ubuntu-24.04
           - platform: linux/arm64
