@@ -4,6 +4,9 @@ on:
   release:
     types: [ "created" ]
   workflow_dispatch:
+  schedule:
+    # Weekly rebuild keeps :latest on current Debian security patches.
+    - cron: "0 3 * * 1"
 
 env:
   REGISTRY: ghcr.io
@@ -22,8 +25,14 @@ jobs:
         run: |
           REPO_NAME_LOWER=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
           REGISTRY_IMAGE="${{ env.REGISTRY }}/${REPO_NAME_LOWER}"
-                    
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+
+          # Checked before refs/heads/* below: a cron run's GITHUB_REF is refs/heads/<default>,
+          # which would otherwise tag it by branch name and never touch :latest.
+          if [[ "${GITHUB_EVENT_NAME}" == "schedule" ]]; then
+            DATE_TAG=$(date -u +%Y%m%d)
+            TAG_ARGS="-t ${REGISTRY_IMAGE}:latest -t ${REGISTRY_IMAGE}:scheduled-${DATE_TAG}"
+            CACHE_REF="scheduled"
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             TAG_VERSION=${GITHUB_REF#refs/tags/}
             TAG_ARGS="-t ${REGISTRY_IMAGE}:${TAG_VERSION} -t ${REGISTRY_IMAGE}:latest"
             CACHE_REF="release"
@@ -40,7 +49,7 @@ jobs:
           echo "repo-name-lower=$REPO_NAME_LOWER" >> $GITHUB_OUTPUT
           echo "registry-image=$REGISTRY_IMAGE" >> $GITHUB_OUTPUT
           echo "tag-args=$TAG_ARGS" >> $GITHUB_OUTPUT
-          echo "cache-ref=$cache-ref" >> $GITHUB_OUTPUT
+          echo "cache-ref=$CACHE_REF" >> $GITHUB_OUTPUT
 
   build:
     needs: prepare
@@ -52,17 +61,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # linux/arm/v7 dropped, see Dockerfile. Both runners are now native, no QEMU needed.
           - platform: linux/amd64
             runner: ubuntu-24.04
           - platform: linux/arm64
             runner: ubuntu-24.04-arm
-          - platform: linux/arm/v7
-            runner: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
-      - uses: docker/setup-qemu-action@v3
-      
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
