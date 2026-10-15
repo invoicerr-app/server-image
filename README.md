@@ -19,6 +19,10 @@ branch and never touches `:latest`.
 
 Monday 03:00 UTC, so Debian/chromium security patches reach `:latest` without a release.
 
+Every build (scheduled, release, manual) runs with no layer cache, so `apt-get upgrade` always
+installs the current Debian packages. A cached apt layer would republish last week's packages under
+a new tag.
+
 ## Manual rebuild
 
 Actions tab -> "Publish Docker Image to GitHub Container Registry" -> "Run workflow". On the
