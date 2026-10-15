@@ -10,14 +10,19 @@ Pi needs a 64-bit OS to run the `arm64` image.
 
 ## Tags
 
-`:latest` is what invoicerr's Dockerfile builds `FROM`. It moves on every release and on the weekly
-rebuild. `:<version>` is pinned, published alongside `:latest` on release. `:scheduled-<YYYYMMDD>`
-is the weekly rebuild's own pin. `:<branch-name>` comes from a manual `workflow_dispatch` on a
-branch and never touches `:latest`.
+`:latest` is what invoicerr's Dockerfile builds `FROM`. It moves on every release, on the weekly
+rebuild and on a manual rebuild of the default branch. `:<version>` is pinned, published alongside
+`:latest` on release. `:scheduled-<YYYYMMDD>` is the weekly rebuild's own pin. `:<branch-name>`
+comes from a manual `workflow_dispatch`; on any branch other than the default it never touches
+`:latest`.
 
 ## Weekly rebuild
 
 Monday 03:00 UTC, so Debian/chromium security patches reach `:latest` without a release.
+
+Every build (scheduled, release, manual) runs with no layer cache, so `apt-get upgrade` always
+installs the current Debian packages. A cached apt layer would republish last week's packages under
+a new tag.
 
 ## Manual rebuild
 

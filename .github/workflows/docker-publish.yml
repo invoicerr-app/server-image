@@ -17,7 +17,6 @@ jobs:
     outputs:
       repo-name-lower: ${{ steps.set-vars.outputs.repo-name-lower }}
       registry-image: ${{ steps.set-vars.outputs.registry-image }}
-      cache-ref: ${{ steps.set-vars.outputs.cache-ref }}
       tag-args: ${{ steps.set-vars.outputs.tag-args }}
     steps:
       - name: Set variables
@@ -31,25 +30,23 @@ jobs:
           if [[ "${GITHUB_EVENT_NAME}" == "schedule" ]]; then
             DATE_TAG=$(date -u +%Y%m%d)
             TAG_ARGS="-t ${REGISTRY_IMAGE}:latest -t ${REGISTRY_IMAGE}:scheduled-${DATE_TAG}"
-            CACHE_REF="scheduled"
           elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
             TAG_VERSION=${GITHUB_REF#refs/tags/}
             TAG_ARGS="-t ${REGISTRY_IMAGE}:${TAG_VERSION} -t ${REGISTRY_IMAGE}:latest"
-            CACHE_REF="release"
           elif [[ "${GITHUB_REF}" == refs/heads/* ]]; then
             BRANCH_NAME=${GITHUB_REF#refs/heads/}
             SAFE_BRANCH_NAME=${BRANCH_NAME//\//-}
             TAG_ARGS="-t ${REGISTRY_IMAGE}:${SAFE_BRANCH_NAME}"
-            CACHE_REF="branch-${SAFE_BRANCH_NAME}"
+            if [[ "${BRANCH_NAME}" == "${{ github.event.repository.default_branch }}" ]]; then
+              TAG_ARGS="-t ${REGISTRY_IMAGE}:latest ${TAG_ARGS}"
+            fi
           else
             TAG_ARGS="-t ${REGISTRY_IMAGE}:latest"
-            CACHE_REF="latest"
           fi
 
           echo "repo-name-lower=$REPO_NAME_LOWER" >> $GITHUB_OUTPUT
           echo "registry-image=$REGISTRY_IMAGE" >> $GITHUB_OUTPUT
           echo "tag-args=$TAG_ARGS" >> $GITHUB_OUTPUT
-          echo "cache-ref=$CACHE_REF" >> $GITHUB_OUTPUT
 
   build:
     needs: prepare
@@ -83,8 +80,8 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           outputs: type=image,name=${{ needs.prepare.outputs.registry-image }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: type=gha,scope=${{ needs.prepare.outputs.cache-ref }}-${{ matrix.platform }}
-          cache-to: type=gha,mode=max,scope=${{ needs.prepare.outputs.cache-ref }}-${{ matrix.platform }}
+          # No layer cache: the apt RUN is the only real layer and must re-run to pick up security patches.
+          no-cache: true
 
       - name: Export digest
         run: |
