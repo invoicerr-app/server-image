@@ -6,7 +6,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # linux/arm/v7 dropped: Node 24 ships no linux-armv7l build.
 ARG TARGETARCH
 
-ENV NODE_VERSION=24.21.0
+ENV NODE_VERSION=24.22.1
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
