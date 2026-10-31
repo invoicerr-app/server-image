@@ -5,7 +5,7 @@ rendering) + Node.js.
 
 ## Architectures
 
-`linux/amd64` and `linux/arm64`. Not `linux/arm/v7`: Node 24 ships no `linux-armv7l` build. A 32-bit
+`linux/amd64` and `linux/arm64`. Not `linux/arm/v7`: Node 26 ships no `linux-armv7l` build. A 32-bit
 Pi needs a 64-bit OS to run the `arm64` image.
 
 ## Tags

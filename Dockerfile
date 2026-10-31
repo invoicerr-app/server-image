@@ -3,10 +3,10 @@ FROM nginx:bookworm
 # bash, not dash: makes pipefail below apply to the SHA-check pipe.
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-# linux/arm/v7 dropped: Node 24 ships no linux-armv7l build.
+# linux/arm/v7 dropped: Node 26 ships no linux-armv7l build.
 ARG TARGETARCH
 
-ENV NODE_VERSION=24.22.1
+ENV NODE_VERSION=26.13.0
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
