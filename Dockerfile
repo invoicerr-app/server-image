@@ -20,9 +20,10 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     xz-utils \
     chromium \
     chromium-driver \
-    libnss3 \
+    libatomic1 \
     libfreetype6 \
     libharfbuzz0b \
+    libnss3 \
     fonts-freefont-ttf \
     bash \
     netcat-traditional \
@@ -41,6 +42,9 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     && rm "node-v$NODE_VERSION-linux-$NODE_ARCH.tar.xz" SHASUMS256.txt \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Node 26 links against libatomic1, which nginx:bookworm does not ship: fail here, not on a published image.
+RUN node --version && node -e "console.log(process.versions.node)"
 
 WORKDIR /usr/share/nginx
 
